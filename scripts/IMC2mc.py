@@ -34,8 +34,8 @@ def getOptions(myopts=None):
     # provide input .txt file    ## TODO: potentially change to input folder containing multiple txt files, depending on nextflow
     standard.add_argument(
         "-i",
-        "--indir",
-        dest="indir",
+        "--input",
+        dest="input",
         action='store',
         required=True,
         help="Input .txt file from IMC.") #Input folder with .txt files from IMC. txt files need to contain image in cyx format!
@@ -61,7 +61,7 @@ def getOptions(myopts=None):
     args = parser.parse_args(myopts)
 
     # Standardize paths
-    args.indir = os.path.abspath(args.indir)
+    args.input = os.path.abspath(args.input)
     return (args)
 #---END_CLI-BLOCK---#
 
@@ -198,20 +198,20 @@ def main(args):
     Create tiff and add ome-metadata out of .txt file to have one file per acquisition with OME-XML metadata
 
     :Arguments:
-        :type args.indir: txt file
-        :param args.indir: Input txt file containing acquisition data
+        :type args.input: txt file
+        :param args.input: Input txt file containing acquisition data
 
         :type args.outdir: folder
         :param args.outdir: output folder to save the output .tif file with OME-XML metadata. Will be created if not existent.
         
     """
     # Define output file by adding _output.tif to input file name and create output directory if not already existent
-    output_file = Path(args.indir).stem + '_output.tif'
+    output_file = Path(args.input).stem + '_output.tif'
     output_file = Path(args.outdir) / output_file
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Read txt file and create tiff and data dependent variables
-    create_tiff(args.indir, output_file)
+    create_tiff(args.input, output_file)
     # Create OME-XML metadata and add to tiff file
     create_ome(args.pixel_size, output_file)
 

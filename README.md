@@ -12,7 +12,7 @@ Formatting Imaging Mass Cytrometry (IMC) output files to be compatible with the 
 ### CLI
 #### Input
 The CLI script `scripts/imc2mc.py` requires 3 inputs
-* The path to the acquisition .txt file with `-i` or `--indir`
+* The path to the acquisition .txt file with `-i` or `--input`
 * The pixel size in um with  `-p` or `--pixel_size`
 * The output folder to store the output .tif files in with `-o` or `--outdir`. Will be created if not present.
 
