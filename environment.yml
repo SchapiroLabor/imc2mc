@@ -5,8 +5,6 @@ channels:
   - anaconda
 dependencies:
   - "python=3.12.4"
-  - pip:
-    - "mask2bbox"
-    - "readimc"
-    - "tifffile"
-    - "ome-types"
+  - "readimc=0.7.0"
+  - "ome-types=0.5.1.post1"
+  - "tifffile=2023.2.28"
