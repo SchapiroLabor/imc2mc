@@ -2,7 +2,7 @@
 Formatting Imaging Mass Cytrometry (IMC) output files to be compatible with the MCMICRO pipeline.
 
 ## Description
-**Raw data:** The Hyperion imaging system outputs one .mcd file per slide containing multiple acquisitions as well as one .txt file per acquisition. This script currently uses the .txt files to create a float32 .tif file with corresponding OME-XML metadata per acquisition.
+The Hyperion imaging system outputs one .mcd file per slide containing multiple acquisitions as well as one .txt file per acquisition. This script currently uses the .txt files to create a float32 .tif file with corresponding OME-XML metadata per acquisition. To transform the .txt. file to a .tif file we use the [readimc](https://github.com/BodenmillerGroup/readimc) package by BodenmillerGroup.
 **Steps in this module:**
 * create .tif file from .txt file
 * add OME-XML metadata to .tif file
