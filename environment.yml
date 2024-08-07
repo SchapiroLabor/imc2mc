@@ -1,0 +1,12 @@
+name: imc2mc
+channels:
+  - conda-forge
+  - defaults
+  - anaconda
+dependencies:
+  - "python=3.12.4"
+  - pip:
+    - "mask2bbox"
+    - "readimc"
+    - "tifffile"
+    - "ome-types"
