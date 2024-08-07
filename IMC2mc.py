@@ -16,6 +16,7 @@ import platform
 from uuid import uuid4
 import argparse
 import os
+from pathlib import Path
 
 
 #---CLI-BLOCK---#
@@ -51,11 +52,11 @@ def getOptions(myopts=None):
     output = parser.add_argument_group(title='Required output')
     output.add_argument(
         "-o",
-        "--output",
-        dest="output",
+        "--outdir",
+        dest="outdir",
         action='store',
         required=True,
-        help="Output file, existing or will be newly created.")
+        help="Output directory, will be created if non existent.")
 
     args = parser.parse_args(myopts)
 
@@ -76,7 +77,7 @@ def create_tiff(input_file, output_file):
         :param input_file: txt file containing acquisition data
 
         :type output_file: .tif file
-        :param output_file: file to save the output .tif file. Will be created if not existent.
+        :param output_file: file to save the output .tif file
     """
     with TXTFile(input_file) as f:
         global markers
@@ -96,7 +97,7 @@ def create_ome(pixel_size, output_file):
         :param pixel_size: Pixel size in um.
 
         :type output_file: tif file
-        :param output_file: file to save the output .tif file with OME-XML metadata. Will be created if not existent.
+        :param output_file: file to save the output .tif file with OME-XML metadata
     """    
     #--Define variables--#
     no_of_channels = img.shape[0]
@@ -200,14 +201,19 @@ def main(args):
         :type args.indir: txt file
         :param args.indir: Input txt file containing acquisition data
 
-        :type args.output: tif file
-        :param args.output: file to save the output .tif file with OME-XML metadata. Will be created if not existent.
+        :type args.outdir: folder
+        :param args.outdir: output folder to save the output .tif file with OME-XML metadata. Will be created if not existent.
         
     """
+    # Define output file by adding _output.tif to input file name and create output directory if not already existent
+    output_file = Path(args.indir).stem + '_output.tif'
+    output_file = Path(args.outdir) / output_file
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
     # Read txt file and create tiff and data dependent variables
-    create_tiff(args.indir, args.output)
+    create_tiff(args.indir, output_file)
     # Create OME-XML metadata and add to tiff file
-    create_ome(args.pixel_size, args.output)
+    create_ome(args.pixel_size, output_file)
 
 
 if __name__ == '__main__':
