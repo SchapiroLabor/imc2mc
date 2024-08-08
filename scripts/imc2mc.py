@@ -66,11 +66,11 @@ def getOptions(myopts=None):
     output = parser.add_argument_group(title='Required output')
     output.add_argument(
         "-o",
-        "--outdir",
-        dest="outdir",
+        "--output",
+        dest="output",
         action='store',
         required=True,
-        help="Output directory, will be created if non existent.")
+        help="Output file with path, will be created if non existent.")
     
     # Version control
     tool = parser.add_argument_group(
@@ -242,14 +242,15 @@ def main(args):
         
     """
     # Define output file by adding _output.tif to input file name and create output directory if not already existent
-    output_file = Path(args.input).stem + '_output.tif'
-    output_file = Path(args.outdir) / output_file
-    output_file.parent.mkdir(parents=True, exist_ok=True)
+    #output_file = Path(args.input).stem + '_output.tif'
+    #output_file = Path(args.outdir) / output_file
+    #output_file.parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     # Read txt file and create tiff and data dependent variables
-    create_tiff(args.input, output_file, args.hp_threshold)
+    create_tiff(args.input, args.output, args.hp_threshold)
     # Create OME-XML metadata and add to tiff file
-    create_ome(args.pixel_size, output_file)
+    create_ome(args.pixel_size, args.output)
 
 
 if __name__ == '__main__':

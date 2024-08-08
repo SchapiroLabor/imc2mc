@@ -15,7 +15,7 @@ The Hyperion imaging system outputs one .mcd file per slide containing multiple 
 The CLI script `scripts/imc2mc.py` requires 3 inputs
 * The path to the acquisition .txt file with `-i` or `--input`
 * The pixel size in um with  `-p` or `--pixel_size`
-* The output folder to store the output .tif files in with `-o` or `--outdir`. Will be created if not present.
+* The output .tif file with `-o` or `--output`. Folder structure will be created if not present.
 
 Optional input:
 * To apply hot pixel filtering, input an integer with `-t` or `--hp_threshold`. Based on [Steinbock](https://bodenmillergroup.github.io/steinbock/latest/cli/preprocessing/) we recommend a threshold of 50. 

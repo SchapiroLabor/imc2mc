@@ -1,3 +1,6 @@
+# .DS_store files
+.DS_Store
+
 # tiff images
 *.tif
 IMC_sample/
