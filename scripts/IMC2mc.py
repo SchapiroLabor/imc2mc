@@ -17,6 +17,7 @@ from uuid import uuid4
 import argparse
 import os
 from pathlib import Path
+from .version import __version__
 
 
 #---CLI-BLOCK---#
@@ -57,7 +58,14 @@ def getOptions(myopts=None):
         action='store',
         required=True,
         help="Output directory, will be created if non existent.")
+    
+    # Version control
+    tool = parser.add_argument_group(
+        title='Tool',
+        description='Tool version control.')
+    tool.add_argument("-v", "--version", action='version', version=f'{__version__}')
 
+    # Parse arguments
     args = parser.parse_args(myopts)
 
     # Standardize paths

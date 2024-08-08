@@ -17,3 +17,6 @@ The CLI script `scripts/imc2mc.py` requires 3 inputs
 * The pixel size in um with  `-p` or `--pixel_size`
 * The output folder to store the output .tif files in with `-o` or `--outdir`. Will be created if not present.
 
+Optional input:
+* The current version can be accessed with `-v`or `--version`
+
