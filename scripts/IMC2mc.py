@@ -18,6 +18,10 @@ import argparse
 import os
 from pathlib import Path
 from version import __version__
+from typing import Optional
+import scipy as sp
+from scipy.ndimage import maximum_filter
+import numpy as np
 
 
 #---CLI-BLOCK---#
@@ -48,6 +52,15 @@ def getOptions(myopts=None):
         required=True,
         type=int,
         help="Provide pixel size in um.")
+    standard.add_argument(
+        "-t",
+        "--hp_threshold",
+        dest="hp_threshold",
+        action="store",
+        required=False,
+        #default=None,
+        type=float,
+        help="Threshold for hot pixel filtering. If not provided, no hot pixel filtering is applied.")
 
     # Tool Output
     output = parser.add_argument_group(title='Required output')
@@ -75,8 +88,21 @@ def getOptions(myopts=None):
 
 
 #----HELPER-FUNCTIONS----#
+def filter_hot_pixels(img: np.ndarray, thres: float) -> np.ndarray:
+    kernel = np.ones((1, 3, 3), dtype=bool)
+    kernel[0, 1, 1] = False
+    max_neighbor_img = maximum_filter(img, footprint=kernel, mode="mirror")
+    return np.where(img - max_neighbor_img > thres, max_neighbor_img, img)
+
+def preprocess_image(img: np.ndarray, hpf: Optional[float] = None) -> np.ndarray:
+    img = img.astype(np.float32)
+    if hpf is not None:
+        img = filter_hot_pixels(img, hpf)
+    return img
+
+
 # create tiff file from input txt file and define global input derived variables 
-def create_tiff(input_file, output_file):
+def create_tiff(input_file, output_file, hp_threshold):
     """
     Read acquisition txt file and create tiff file 
 
@@ -92,6 +118,8 @@ def create_tiff(input_file, output_file):
         markers = f.channel_labels # targets
         global img  ## TODO: save only shape as global variable here to save memory
         img = f.read_acquisition() # numpy array, shape: (c,y,x), dtype: float32  
+        if args.hp_threshold:
+            img = preprocess_image(img, hp_threshold)
     tiff.imwrite(output_file, img)
 
 
@@ -219,7 +247,7 @@ def main(args):
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Read txt file and create tiff and data dependent variables
-    create_tiff(args.input, output_file)
+    create_tiff(args.input, output_file, args.hp_threshold)
     # Create OME-XML metadata and add to tiff file
     create_ome(args.pixel_size, output_file)
 
