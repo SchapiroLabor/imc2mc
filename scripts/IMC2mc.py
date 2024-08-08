@@ -17,7 +17,7 @@ from uuid import uuid4
 import argparse
 import os
 from pathlib import Path
-from .version import __version__
+from version import __version__
 
 
 #---CLI-BLOCK---#
