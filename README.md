@@ -39,8 +39,8 @@ docker run --rm -v $(pwd):/data ghcr.io/schapirolabor/imc2mc:latest \
     imc2mc \
     -i /data/input_dir \
     -o /data/output.ome.tif \
-    -n 6 \
-    -m 99th
+    -p 1 \
+    -t 50
 ```
 
 ### Option 3: Development/Conda environment
