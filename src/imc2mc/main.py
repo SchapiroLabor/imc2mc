@@ -6,9 +6,9 @@
 
 from readimc import TXTFile
 import ome_types
-from ome_types.model import OME,Pixels,TiffData,Channel,Plane
-from ome_types.model.simple_types import PixelsID
-from ome_types.model.pixels import DimensionOrder
+from ome_types.model import OME, Image, Pixels, TiffData, Channel, Plane
+from ome_types.model.simple_types import ChannelID, ImageID, PixelsID
+from ome_types.model.pixels import DimensionOrder, PixelType
 from ome_types import to_xml
 import tifffile as tiff
 import copy
@@ -17,33 +17,33 @@ from uuid import uuid4
 import argparse
 import os
 from pathlib import Path
-from version import __version__
+from imc2mc._version import __version__
 from typing import Optional
-import scipy as sp
 from scipy.ndimage import maximum_filter
 import numpy as np
 
 
-#---CLI-BLOCK---#
+# ---CLI-BLOCK---#
 def getOptions(myopts=None):
-    """ Function to pull in arguments """
+    """Function to pull in arguments"""
     description = """ IMC2MC """
     parser = argparse.ArgumentParser(
-        description=description,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        description=description, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
     # Standard Input
     standard = parser.add_argument_group(
-        title='Standard Inputs',
-        description='Standard input for staging module.')
+        title="Standard Inputs", description="Standard input for staging module."
+    )
     # provide input .txt file    ## TODO: potentially change to input folder containing multiple txt files, depending on nextflow
     standard.add_argument(
         "-i",
         "--input",
         dest="input",
-        action='store',
+        action="store",
         required=True,
-        help="Input .txt file from IMC.") #Input folder with .txt files from IMC. txt files need to contain image in cyx format!
+        help="Input .txt file from IMC.",
+    )  # Input folder with .txt files from IMC. txt files need to contain image in cyx format!
     standard.add_argument(
         "-p",
         "--pixel_size",
@@ -51,48 +51,52 @@ def getOptions(myopts=None):
         action="store",
         required=True,
         type=int,
-        help="Provide pixel size in um.")
+        help="Provide pixel size in um.",
+    )
     standard.add_argument(
         "-t",
         "--hp_threshold",
         dest="hp_threshold",
         action="store",
         required=False,
-        #default=None,
+        # default=None,
         type=float,
-        help="Threshold for hot pixel filtering. If not provided, no hot pixel filtering is applied.")
+        help="Threshold for hot pixel filtering. If not provided, no hot pixel filtering is applied.",
+    )
 
     # Tool Output
-    output = parser.add_argument_group(title='Required output')
+    output = parser.add_argument_group(title="Required output")
     output.add_argument(
         "-o",
         "--output",
         dest="output",
-        action='store',
+        action="store",
         required=True,
-        help="Output file with path, will be created if non existent.")
-    
+        help="Output file with path, will be created if non existent.",
+    )
+
     # Version control
-    tool = parser.add_argument_group(
-        title='Tool',
-        description='Tool version control.')
-    tool.add_argument("-v", "--version", action='version', version=f'{__version__}')
+    tool = parser.add_argument_group(title="Tool", description="Tool version control.")
+    tool.add_argument("-v", "--version", action="version", version=f"{__version__}")
 
     # Parse arguments
     args = parser.parse_args(myopts)
 
     # Standardize paths
     args.input = os.path.abspath(args.input)
-    return (args)
-#---END_CLI-BLOCK---#
+    return args
 
 
-#----HELPER-FUNCTIONS----#
+# ---END_CLI-BLOCK---#
+
+
+# ----HELPER-FUNCTIONS----#
 def filter_hot_pixels(img: np.ndarray, thres: float) -> np.ndarray:
     kernel = np.ones((1, 3, 3), dtype=bool)
     kernel[0, 1, 1] = False
     max_neighbor_img = maximum_filter(img, footprint=kernel, mode="mirror")
     return np.where(img - max_neighbor_img > thres, max_neighbor_img, img)
+
 
 def preprocess_image(img: np.ndarray, hpf: Optional[float] = None) -> np.ndarray:
     img = img.astype(np.float32)
@@ -101,10 +105,10 @@ def preprocess_image(img: np.ndarray, hpf: Optional[float] = None) -> np.ndarray
     return img
 
 
-# create tiff file from input txt file and define global input derived variables 
+# create tiff file from input txt file and define global input derived variables
 def create_tiff(input_file, output_file, hp_threshold):
     """
-    Read acquisition txt file and create tiff file 
+    Read acquisition txt file and create tiff file
 
     :Arguments:
         :type input_file: txt file
@@ -115,10 +119,10 @@ def create_tiff(input_file, output_file, hp_threshold):
     """
     with TXTFile(input_file) as f:
         global markers
-        markers = f.channel_labels # targets
+        markers = f.channel_labels  # targets
         global img  ## TODO: save only shape as global variable here to save memory
-        img = f.read_acquisition() # numpy array, shape: (c,y,x), dtype: float32  
-        if args.hp_threshold:
+        img = f.read_acquisition()  # numpy array, shape: (c,y,x), dtype: float32
+        if hp_threshold is not None:
             img = preprocess_image(img, hp_threshold)
     tiff.imwrite(output_file, img)
 
@@ -134,47 +138,40 @@ def create_ome(pixel_size, output_file):
 
         :type output_file: tif file
         :param output_file: file to save the output .tif file with OME-XML metadata
-    """    
-    #--Define variables--#
+    """
+    # --Define variables--#
     no_of_channels = img.shape[0]
-    no_of_tiles = 1 #hard coded for now 
-    #bits_per_sample = 32
+    no_of_tiles = 1  # hard coded for now
+    # bits_per_sample = 32
     pixel_size = pixel_size
 
-    #--Generate channels block--#
+    # --Generate channels block--#
     chann_block = []
     for ch, chann_name in enumerate(markers):
         chann_block.append(
-            Channel(
-                id=ome_types.model.simple_types.ChannelID(
-                    'Channel:{x}'.format(x=ch)),
-                    name=chann_name
-                    ))
-        
-    #--Generate tiff_data_blocks--#
+            Channel(id=ChannelID("Channel:{x}".format(x=ch)), name=chann_name)
+        )
+
+    # --Generate tiff_data_blocks--#
     tiff_block = []
-    #uuid_obj=UUID(file_name=img_name,value=uuid4().urn)
+    # uuid_obj=UUID(file_name=img_name,value=uuid4().urn)
     for ch in range(0, no_of_channels):
         tiff_block.append(
             TiffData(
                 first_c=ch,
                 ifd=ch,
-                plane_count=1  #,
-                #uuid=uuid_obj
-            ))
-        
-    #--Generate planes block (contains the information of each tile)--#
+                plane_count=1,  # ,
+                # uuid=uuid_obj
+            )
+        )
+
+    # --Generate planes block (contains the information of each tile)--#
     plane_block = []
-    #length_units=ome_types.model.simple_types.UnitsLength('µm')
+    # length_units=ome_types.model.simple_types.UnitsLength('µm')
     for ch in range(0, no_of_channels):
-        plane_block.append(
-            Plane(
-                the_c=ch,
-                the_t=0,
-                the_z=0
-            ))    
-        
-    #--Generate pixels block--#
+        plane_block.append(Plane(the_c=ch, the_t=0, the_z=0))
+
+    # --Generate pixels block--#
     pix_block = []
     ifd_counter = 0
     for t in range(0, no_of_tiles):
@@ -182,52 +179,61 @@ def create_ome(pixel_size, output_file):
         template_chann_block = copy.deepcopy(chann_block)
         template_tiffdata_block = copy.deepcopy(tiff_block)
         for ch, mark in enumerate(markers):
-            template_chann_block[ch].id = 'Channel:{y}:{x}'.format(x=ch,y=100 +t)  ### why?
+            template_chann_block[ch].id = "Channel:{y}:{x}".format(
+                x=ch, y=100 + t
+            )  ### why?
             template_chann_block[ch].name = mark
             template_tiffdata_block[ch].ifd = ifd_counter
             ifd_counter += 1
         pix_block.append(
             Pixels(
-                id=ome_types.model.simple_types.PixelsID('Pixels:{x}'.format(x=t)),
-                dimension_order=ome_types.model.pixels.DimensionOrder('XYZCT'),  ### check if the order is correct!!
+                id=PixelsID("Pixels:{x}".format(x=t)),
+                dimension_order=DimensionOrder(
+                    "XYZCT"
+                ),  ### check if the order is correct!!
                 size_c=no_of_channels,
                 size_t=1,
                 size_x=img.shape[2],
                 size_y=img.shape[1],
                 size_z=1,
-                type=ome_types.model.pixels.PixelType('float'),
+                type=PixelType("float"),
                 big_endian=False,
                 channels=template_chann_block,
                 interleaved=False,
-                physical_size_x=pixel_size, # hard coded for now 
-                physical_size_y=pixel_size, # hard coded for now
+                physical_size_x=pixel_size,  # hard coded for now
+                physical_size_y=pixel_size,  # hard coded for now
                 physical_size_z=1.0,
                 planes=template_plane_block,
-                #bits_per_sample=bits_per_sample,
-                tiff_data_blocks=template_tiffdata_block))
-        
-    #--Generate image block--#
+                # bits_per_sample=bits_per_sample,
+                tiff_data_blocks=template_tiffdata_block,
+            )
+        )
+
+    # --Generate image block--#
     img_block = []
     for t in range(0, no_of_tiles):
         img_block.append(
-            ome_types.model.Image(
-                id=ome_types.model.simple_types.ImageID('Image:{x}'.format(x=t)),
-                pixels=pix_block[t]))    
-        
-    #--Create the OME object with all previously defined blocks--#
+            Image(id=ImageID("Image:{x}".format(x=t)), pixels=pix_block[t])
+        )
+
+    # --Create the OME object with all previously defined blocks--#
     ome_custom = OME()
-    ome_custom.creator = " ".join([
-        ome_types.__name__, ome_types.__version__, '/ python version-',
-        platform.python_version()
-    ])
+    ome_custom.creator = " ".join(
+        [
+            ome_types.__name__,
+            ome_types.__version__,
+            "/ python version-",
+            platform.python_version(),
+        ]
+    )
     ome_custom.images = img_block
     ome_custom.uuid = uuid4().urn
     ome_xml = to_xml(ome_custom)
     tiff.tiffcomment(output_file, ome_xml)
-#----END_HELPER-FUNCTIONS----#
+# ----END_HELPER-FUNCTIONS----#
 
 
-#----MAIN-FUNCTION----#
+# ----MAIN-FUNCTION----#
 # create tiff with OME-XML metadata out of acquisition txt file
 def main(args):
     """
@@ -239,12 +245,12 @@ def main(args):
 
         :type args.outdir: folder
         :param args.outdir: output folder to save the output .tif file with OME-XML metadata. Will be created if not existent.
-        
+
     """
     # Define output file by adding _output.tif to input file name and create output directory if not already existent
-    #output_file = Path(args.input).stem + '_output.tif'
-    #output_file = Path(args.outdir) / output_file
-    #output_file.parent.mkdir(parents=True, exist_ok=True)
+    # output_file = Path(args.input).stem + '_output.tif'
+    # output_file = Path(args.outdir) / output_file
+    # output_file.parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     # Read txt file and create tiff and data dependent variables
@@ -253,10 +259,12 @@ def main(args):
     create_ome(args.pixel_size, args.output)
 
 
-if __name__ == '__main__':
-     """Tool is called on the command-line"""
-     
-     args = getOptions()
-     #warnings.filterwarnings("ignore", category=DeprecationWarning)  #add if needed
-     
-     main(args)
+def cli():
+    """Command-line entry point."""
+    args = getOptions()
+    main(args)
+
+
+if __name__ == "__main__":
+    """Tool is called on the command-line"""
+    cli()
